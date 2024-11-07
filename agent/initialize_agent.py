@@ -1,5 +1,6 @@
 import os
 import constants
+import json
 
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
@@ -15,22 +16,20 @@ def initialize_agent():
     llm = ChatOpenAI(model="gpt-4o-mini")
 
     # Read wallet data from environment variable
-    wallet_data = os.getenv(constants.WALLET_DATA_ENV_VAR)
-
-    print("Initialized CDP Agentkit with wallet data:", wallet_data, flush=True)
+    wallet_id = os.getenv(constants.WALLET_ID_ENV_VAR)
+    wallet_seed = os.getenv(constants.WALLET_SEED_ENV_VAR)
 
     # Configure CDP Agentkit Langchain Extension.
     values = {}
-    if wallet_data is not None:
+    if wallet_id and wallet_seed:
         # If there is a wallet configuration in environment variables, use it
-        values = {"cdp_wallet_data": wallet_data}
+        print("Initialized CDP Agentkit with wallet data:", wallet_id, wallet_seed, flush=True)
+        values = {"cdp_wallet_data": json.dumps({ "wallet_id": wallet_id, "seed": wallet_seed })}
 
     agentkit = CdpAgentkitWrapper(**values)
 
     # Export and store the updated wallet data back to environment variable
-    wallet_data = agentkit.export_wallet()
-    print("Exporting wallet data:", wallet_data)
-    os.environ[constants.WALLET_DATA_ENV_VAR] = wallet_data
+    # wallet_data = agentkit.export_wallet()
 
     # Initialize CDP Agentkit Toolkit and get tools.
     cdp_toolkit = CdpToolkit.from_cdp_agentkit_wrapper(agentkit)

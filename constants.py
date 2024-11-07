@@ -7,7 +7,8 @@ EVENT_TYPE_TOOLS: Final[str] = "tools"
 EVENT_TYPE_ERROR: Final[str]= "error"
 
 # Environment variables
-WALLET_DATA_ENV_VAR: Final[str] = "CDP_WALLET_DATA"
+WALLET_ID_ENV_VAR: Final[str] = "CDP_WALLET_ID"
+WALLET_SEED_ENV_VAR: Final[str] = "CDP_WALLET_SEED"
 
 # Errors
 class InputValidationError(Exception):
