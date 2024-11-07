@@ -13,3 +13,6 @@ WALLET_DATA_ENV_VAR: Final[str] = "CDP_WALLET_DATA"
 class InputValidationError(Exception):
     """Custom exception for input validation errors"""
     pass
+
+# Actions
+DEPLOY_TOKEN: Final[str] = "deploy_token"
