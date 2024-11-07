@@ -16,3 +16,4 @@ class InputValidationError(Exception):
 
 # Actions
 DEPLOY_TOKEN: Final[str] = "deploy_token"
+DEPLOY_NFT: Final[str] = "deploy_nft"
