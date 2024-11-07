@@ -13,9 +13,8 @@ app = Flask(__name__)
 CORS(app)
 
 # Initialize the agent
-agent_executor, config = initialize_agent()
+agent_executor = initialize_agent()
 app.agent_executor = agent_executor
-app.agent_config = config
 
 # Setup SQLite tables
 setup()
@@ -25,8 +24,12 @@ setup()
 def chat():
     try:
         data = request.get_json()
+        # Parse the user input from the request
+        input = data['input']
+        # Use the conversation_id passed in the request for conversation memory
+        config = {"configurable": {"thread_id": data['conversation_id']}}
         return Response(
-            stream_with_context(run_agent(data['input'], app.agent_executor, app.agent_config)),
+            stream_with_context(run_agent(input, app.agent_executor, config)),
             mimetype='text/event-stream',
             headers={
                 'Cache-Control': 'no-cache',
