@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "agent-backend"
+version = "0.1.0"
+description = ""
+authors = ["Alec Chen <93971719+0xAlec@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+flask = "^3.0.3"
+langchain = "^0.3.6"
+langchain-openai = "^0.2.5"
+langgraph = "^0.2.42"
+pydantic = "^2.9.2"
+cdp-sdk = "^0.10.0"
+python-dotenv = "^1.0.1"
+cdp-langchain = "^0.0.1"
+cdp-agentkit-core = "^0.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
