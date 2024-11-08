@@ -14,8 +14,8 @@ langgraph = "^0.2.42"
 pydantic = "^2.9.2"
 cdp-sdk = "^0.10.0"
 python-dotenv = "^1.0.1"
-cdp-langchain = "^0.0.1"
-cdp-agentkit-core = "^0.0.1"
+cdp-langchain = "^0.0.2"
+cdp-agentkit-core = "^0.0.2"
 flask-cors = "^5.0.0"
 
 

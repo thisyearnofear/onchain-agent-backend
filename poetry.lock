@@ -427,34 +427,34 @@ test = ["coverage (>=7)", "hypothesis", "pytest"]
 
 [[package]]
 name = "cdp-agentkit-core"
-version = "0.0.1"
+version = "0.0.2"
 description = "CDP Agentkit core primitives"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "cdp_agentkit_core-0.0.1-py3-none-any.whl", hash = "sha256:476716ad16df056bebf8d72c44270c80845804902b07ad66b8b9a38add86e561"},
-    {file = "cdp_agentkit_core-0.0.1.tar.gz", hash = "sha256:abdc8d9a4c31259048fa718b650f294d0b2ad0065667b6cde0ae6e77571ac057"},
+    {file = "cdp_agentkit_core-0.0.2-py3-none-any.whl", hash = "sha256:1b4dd62a1f44fcdd9f85b72a533447219864c148276b93466fa6bae5e94d338f"},
+    {file = "cdp_agentkit_core-0.0.2.tar.gz", hash = "sha256:98122ee43d73eb221d7a92b9bed554f377b9c88639cdfc75a61871c3c0f044f8"},
 ]
 
 [package.dependencies]
-cdp-sdk = ">=0.10.1,<0.11.0"
+cdp-sdk = ">=0.10.3,<0.11.0"
 pydantic = ">=2.0,<3.0"
 web3 = "7.2.0"
 
 [[package]]
 name = "cdp-langchain"
-version = "0.0.1"
+version = "0.0.2"
 description = "CDP Agentkit Langchain Extension"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "cdp_langchain-0.0.1-py3-none-any.whl", hash = "sha256:05f488dfa0f93ddb47d39e5ac1196cc0158908a257e953f96e836a6a3b8d8a2a"},
-    {file = "cdp_langchain-0.0.1.tar.gz", hash = "sha256:d384de4bfbcdb284b448d209f061c61822edc99364546a6e33ed1632195f01ca"},
+    {file = "cdp_langchain-0.0.2-py3-none-any.whl", hash = "sha256:6792a31c5f1fea8ff351948d55350e6cefafe9ff9c94888c1578f32127cf3533"},
+    {file = "cdp_langchain-0.0.2.tar.gz", hash = "sha256:f40421a2aaf7f4432d318c986d0981f5396864deea61fa38d32728753be8eba9"},
 ]
 
 [package.dependencies]
-cdp-agentkit-core = ">=0.0.1,<0.0.2"
-cdp-sdk = ">=0.10.1,<0.11.0"
+cdp-agentkit-core = ">=0.0.2,<0.0.3"
+cdp-sdk = ">=0.10.3,<0.11.0"
 langchain = ">=0.3.4,<0.4.0"
 langchain-openai = ">=0.2.4,<0.3.0"
 langgraph = ">=0.2.39,<0.3.0"
@@ -1871,13 +1871,13 @@ orjson = ">=3.10.1"
 
 [[package]]
 name = "langsmith"
-version = "0.1.140"
+version = "0.1.141"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.140-py3-none-any.whl", hash = "sha256:3de70183ae19a4ada4d77a8a9f336ff95ca0ead98215771033ee889a2889fe19"},
-    {file = "langsmith-0.1.140.tar.gz", hash = "sha256:cb0a717d7b9e6d3145285d7ca0ab216e064cbe7a1ca4139fc04af57fb2315e70"},
+    {file = "langsmith-0.1.141-py3-none-any.whl", hash = "sha256:e133c6bed9c6d274f19735696a169dea890d35d444ae61c25fb47082aa2d0f16"},
+    {file = "langsmith-0.1.141.tar.gz", hash = "sha256:f3f17d2abc7b8a3857ad8d492b535970109b5ea40e712df91a782522ed581516"},
 ]
 
 [package.dependencies]
@@ -2272,13 +2272,13 @@ files = [
 
 [[package]]
 name = "packaging"
-version = "24.1"
+version = "24.2"
 description = "Core utilities for Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "packaging-24.1-py3-none-any.whl", hash = "sha256:5b8f2217dbdbd2f7f384c41c628544e6d52f2d0f53c6d0c3ea61aa5d1d7ff124"},
-    {file = "packaging-24.1.tar.gz", hash = "sha256:026ed72c8ed3fcce5bf8950572258698927fd1dbda10a5e981cdf0ac37f4f002"},
+    {file = "packaging-24.2-py3-none-any.whl", hash = "sha256:09abb1bccd265c01f4a3aa3f7a7db064b36514d2cba19a2f694fe6150451a759"},
+    {file = "packaging-24.2.tar.gz", hash = "sha256:c228a6dc5e932d346bc5739379109d49e8853dd8223571c7c5b55260edc0b97f"},
 ]
 
 [[package]]
@@ -3386,4 +3386,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "0921dfa686a3f7365ac09039c2d72cc0ba4e027a538f7192941983f3ca0250bb"
+content-hash = "0a0c1787b4ec1f022dff3fe1376f1c25db3cecc0ad2d4b44fc4f1473b19b72f8"
