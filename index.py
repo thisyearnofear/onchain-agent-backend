@@ -12,12 +12,12 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
+# Setup SQLite tables
+setup()
+
 # Initialize the agent
 agent_executor = initialize_agent()
 app.agent_executor = agent_executor
-
-# Setup SQLite tables
-setup()
 
 # Interact with the agent
 @app.route("/api/chat", methods=['POST'])
