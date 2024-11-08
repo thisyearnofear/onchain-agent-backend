@@ -2,7 +2,6 @@ from flask import Flask, request, Response, stream_with_context, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-from middleware.authentication import authenticate
 from agent.initialize_agent import initialize_agent
 from agent.run_agent import run_agent
 from db.setup import setup
@@ -22,7 +21,6 @@ setup()
 
 # Interact with the agent
 @app.route("/api/chat", methods=['POST'])
-@authenticate
 def chat():
     try:
         data = request.get_json()
