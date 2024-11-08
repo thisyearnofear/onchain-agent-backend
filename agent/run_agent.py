@@ -1,10 +1,8 @@
-import re
 from typing import Iterator
 from langchain_core.messages import HumanMessage
 import constants
 from utils import format_sse
-from db.tokens import add_token
-from db.nfts import add_nft
+from agent.handle_agent_action import handle_agent_action
 
 def run_agent(input, agent_executor, config) -> Iterator[str]:
     """Run the agent and yield formatted SSE messages"""
@@ -21,15 +19,6 @@ def run_agent(input, agent_executor, config) -> Iterator[str]:
                 content = chunk["tools"]["messages"][0].content
                 if content:
                     yield format_sse(content, constants.EVENT_TYPE_TOOLS, functions=[name])
-                if name == constants.DEPLOY_TOKEN:
-                    # Search for contract address from output
-                    address = re.search(r'0x[a-fA-F0-9]{40}', content).group()
-                    # Add token to database
-                    add_token(address)
-                if name == constants.DEPLOY_NFT:
-                    # Search for contract address from output
-                    address = re.search(r'0x[a-fA-F0-9]{40}', content).group()
-                    # Add NFT to database
-                    add_nft(address)
+                    handle_agent_action(name, content)
     except Exception as e:
         yield format_sse(f"Error: {str(e)}", constants.EVENT_TYPE_ERROR)
