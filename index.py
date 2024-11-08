@@ -47,7 +47,7 @@ def chat():
 def tokens():
     try:
         tokens = get_tokens()
-        return jsonify({'tokens': tokens[0] if tokens else []}), 200
+        return jsonify({'tokens': tokens}), 200
     except Exception as e:
         app.logger.error(f"Unexpected error in tokens endpoint: {str(e)}")
         return jsonify({'error': 'An unexpected error occurred'}), 500
@@ -57,7 +57,7 @@ def tokens():
 def nfts():
     try:
         nfts = get_nfts()
-        return jsonify({'nfts': nfts[0] if nfts else []}), 200
+        return jsonify({'nfts': nfts}), 200
     except Exception as e:
         app.logger.error(f"Unexpected error in nfts endpoint: {str(e)}")
         return jsonify({'error': 'An unexpected error occurred'}), 500
