@@ -3,6 +3,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
+import datetime
 
 from cdp import Cdp, Wallet
 from cdp_langchain.utils import CdpAgentkitWrapper
@@ -24,15 +25,26 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def save_development_wallet(wallet: Wallet) -> None:
-    """Save development wallet information to database."""
+    """Save development wallet information to database and persist seed."""
+    # Export wallet data (includes seed and ID)
+    data = wallet.export_data()
+    
+    # Save wallet info to database
     wallet_info = {
         "wallet_id": wallet.id,
         "network": wallet.network_id,
         "default_address": wallet.default_address.address_id,
-        "addresses": [addr.address_id for addr in wallet.addresses]
+        "addresses": [addr.address_id for addr in wallet.addresses],
+        "created_at": datetime.datetime.utcnow().isoformat(),
+        "last_validated": datetime.datetime.utcnow().isoformat(),
+        "validation_count": 1
     }
     save_wallet_info(wallet.id, wallet_info)
-    logger.info("Saved wallet info to database")
+    
+    # Save encrypted seed file for development
+    seed_path = Path("dev_wallet_seed.json")
+    wallet.save_seed(str(seed_path), encrypt=True)
+    logger.info(f"Development seed saved to: {seed_path}")
 
 def initialize_wallet(config: Dict[str, str]) -> Wallet:
     """Initialize wallet based on environment (development or production)."""
@@ -41,31 +53,63 @@ def initialize_wallet(config: Dict[str, str]) -> Wallet:
     if wallet_id:
         logger.info(f"Production mode: Loading wallet {wallet_id}")
         try:
+            # First fetch the unhydrated wallet
             wallet = Wallet.fetch(wallet_id)
-            logger.info("Successfully loaded production wallet")
+            logger.info(f"Fetched wallet {wallet_id} from server")
+            
+            # Get stored wallet info from our database
+            stored_info = get_wallet_info(wallet_id)
+            if not stored_info:
+                raise ValueError(f"No stored info found for wallet {wallet_id}")
+            
+            # Validate wallet network matches our expected network
+            if wallet.network_id != stored_info.get('network'):
+                raise ValueError(f"Wallet network mismatch. Expected: {stored_info.get('network')}, Got: {wallet.network_id}")
+            
+            # Check if we need to hydrate the wallet
+            if not wallet.can_sign():
+                logger.info("Wallet needs hydration")
+                # Try to load seed from development file first
+                seed_path = Path("dev_wallet_seed.json")
+                if seed_path.exists():
+                    logger.info("Loading seed from development file")
+                    wallet.load_seed(str(seed_path))
+                else:
+                    # For production, you would fetch the seed from your secure storage
+                    logger.warning("No seed file found - wallet will be read-only")
+            
+            logger.info(f"Wallet status - Can sign: {wallet.can_sign()}")
+            logger.info(f"Network: {wallet.network_id}")
+            logger.info(f"Default Address: {wallet.default_address.address_id}")
+            
             return wallet
+            
         except Exception as e:
             logger.error(f"Failed to load production wallet: {e}")
             raise
     
-    # Create a new Coinbase-Managed (2-of-2) MPC wallet
-    logger.info("Creating new Coinbase-Managed wallet")
+    # Create a new Developer-Managed (1-of-1) wallet for testing
+    logger.info("Creating new Developer-Managed wallet for testing")
     try:
-        # The create method automatically uses Coinbase-Managed when no seed is provided
+        # Create wallet on Base Sepolia testnet
         wallet = Wallet.create(network_id="base-sepolia")
-        logger.info(f"Created new Coinbase-Managed wallet: {wallet.id}")
-        logger.info("This wallet uses 2-of-2 MPC security with Coinbase")
+        logger.info(f"Created new Developer-Managed wallet: {wallet.id}")
         
-        # Save wallet info to database
+        # Save wallet info and seed
         save_development_wallet(wallet)
         
-        # Store the wallet ID for future sessions
-        logger.info(f"Important: Save this wallet ID: {wallet.id}")
-        logger.info("Set this ID in your WALLET_ID environment variable for future sessions")
+        # Important security notices
+        logger.info("\nIMPORTANT SECURITY NOTICES:")
+        logger.info("1. This is a Developer-Managed (1-of-1) wallet - suitable for testing only")
+        logger.info("2. For production, consider upgrading to Coinbase-Managed wallets with Server-Signer")
+        logger.info("3. Ensure your CDP API keys are stored securely")
+        logger.info("4. Enable IP whitelisting in the CDP Portal for additional security")
+        logger.info(f"5. Save this wallet ID securely: {wallet.id}")
+        logger.info(f"6. Seed is encrypted and saved to dev_wallet_seed.json")
         
         return wallet
     except Exception as e:
-        logger.error(f"Failed to create Coinbase-Managed wallet: {e}")
+        logger.error(f"Failed to create Developer-Managed wallet: {e}")
         raise
 
 def initialize_agent() -> AgentExecutor:
@@ -79,10 +123,12 @@ def initialize_agent() -> AgentExecutor:
     if not cdp_api_key_name or not cdp_api_key_private_key:
         raise ValueError("CDP_API_KEY_NAME and CDP_API_KEY_PRIVATE_KEY environment variables must be set")
 
-    # Configure CDP SDK with both API key name and private key
+    # Configure CDP SDK with API key name and raw private key
     try:
         logger.info("Configuring CDP SDK...")
-        Cdp.configure(cdp_api_key_name, cdp_api_key_private_key)
+        # The private key should be raw base64 without any formatting
+        # CDP SDK will handle the proper formatting internally
+        Cdp.configure(cdp_api_key_name, cdp_api_key_private_key.strip())
         logger.info("CDP SDK configured successfully")
             
     except Exception as e:

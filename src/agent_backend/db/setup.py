@@ -1,9 +1,6 @@
 """Database setup and initialization."""
 
 import logging
-import sqlite3
-from pathlib import Path
-
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
@@ -17,39 +14,34 @@ def get_engine() -> Engine:
     options = get_engine_options()
     return create_engine(url, **options)
 
-def setup() -> None:
-    """Set up database tables."""
+def setup_database() -> None:
+    """Set up the database tables."""
     try:
         engine = get_engine()
         
-        # Create tables
+        # Create tables using SQLAlchemy
         with engine.connect() as conn:
-            # Create wallets table
+            # Create wallet info table with security metadata
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS wallets (
-                    id TEXT PRIMARY KEY,
-                    data TEXT NOT NULL
+                CREATE TABLE IF NOT EXISTS wallet_info (
+                    wallet_id VARCHAR(255) PRIMARY KEY,
+                    info JSONB NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    validation_count INTEGER DEFAULT 1,
+                    CONSTRAINT valid_json CHECK (info IS NOT NULL)
                 )
             """))
             
-            # Create tokens table
+            # Create index on updated_at for efficient queries
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS tokens (
-                    address TEXT PRIMARY KEY
-                )
-            """))
-            
-            # Create nfts table
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS nfts (
-                    address TEXT PRIMARY KEY
-                )
+                CREATE INDEX IF NOT EXISTS idx_wallet_updated 
+                ON wallet_info(updated_at)
             """))
             
             conn.commit()
-            
-        logger.info("Database tables created successfully")
+            logger.info("Database tables created successfully")
         
     except Exception as e:
-        logger.error(f"Error setting up database: {str(e)}")
+        logger.error(f"Failed to set up database: {str(e)}")
         raise
