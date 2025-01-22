@@ -48,15 +48,24 @@ def initialize_wallet(config: Dict[str, str]) -> Wallet:
             logger.error(f"Failed to load production wallet: {e}")
             raise
     
-    # Development mode - create a new wallet if none exists
-    logger.info("Development mode: Creating new wallet")
+    # Create a new Coinbase-Managed (2-of-2) MPC wallet
+    logger.info("Creating new Coinbase-Managed wallet")
     try:
-        wallet = Wallet.create()
-        logger.info(f"Created new development wallet: {wallet.id}")
+        # The create method automatically uses Coinbase-Managed when no seed is provided
+        wallet = Wallet.create(network_id="base-sepolia")
+        logger.info(f"Created new Coinbase-Managed wallet: {wallet.id}")
+        logger.info("This wallet uses 2-of-2 MPC security with Coinbase")
+        
+        # Save wallet info to database
         save_development_wallet(wallet)
+        
+        # Store the wallet ID for future sessions
+        logger.info(f"Important: Save this wallet ID: {wallet.id}")
+        logger.info("Set this ID in your WALLET_ID environment variable for future sessions")
+        
         return wallet
     except Exception as e:
-        logger.error(f"Failed to create development wallet: {e}")
+        logger.error(f"Failed to create Coinbase-Managed wallet: {e}")
         raise
 
 def format_private_key(key: str) -> str:
@@ -75,17 +84,18 @@ def format_private_key(key: str) -> str:
                 logger.debug("Extracted base64 part length: %d", len(clean_key))
                 break
 
-    # Remove any escaped newlines and actual newlines
+    # Remove any escaped newlines, actual newlines, and existing padding
     original_length = len(clean_key)
-    clean_key = clean_key.replace("\\n", "").replace("\n", "")
+    clean_key = clean_key.replace("\\n", "").replace("\n", "").rstrip("=")
     if len(clean_key) != original_length:
-        logger.debug("Removed %d newline characters", original_length - len(clean_key))
+        logger.debug("Removed %d characters (newlines and padding)", original_length - len(clean_key))
 
-    # Add padding if needed
+    # Calculate and add proper padding
     padding_needed = len(clean_key) % 4
     if padding_needed:
-        clean_key += "=" * (4 - padding_needed)
-        logger.debug("Added %d padding characters", 4 - padding_needed)
+        padding_count = 4 - padding_needed
+        clean_key += "=" * padding_count
+        logger.debug("Added %d padding characters", padding_count)
 
     # Validate the key is proper base64
     import base64
@@ -96,12 +106,11 @@ def format_private_key(key: str) -> str:
         logger.error(f"Invalid base64 in private key: {str(e)}")
         logger.error("Key content: %s", clean_key)
         raise ValueError("Private key is not valid base64") from e
-
-    # Remove the padding for the final formatted key
-    clean_key = clean_key.rstrip("=")
     
     # Build the formatted key with proper PEM structure
     formatted_lines = ["-----BEGIN EC PRIVATE KEY-----"]
+    # Remove padding for the formatted key
+    clean_key = clean_key.rstrip("=")
     formatted_lines.extend(
         clean_key[i:i + 64] for i in range(0, len(clean_key), 64)
     )
