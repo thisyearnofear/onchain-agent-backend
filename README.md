@@ -11,12 +11,12 @@ This project features a Python backend designed to work seamlessly with CDP's Ag
 ## Modules
 
 - The `agent` module contains functions for interacting with the onchain agent.
-    - `initialize_agent` creates (or loads) an agent from CDP Wallet Data.
-    - `run_agent` invokes the agent.
-    - `handle_action_agent` handles agent actions - in our demo, we just save the addresses of deployed NFTs and ERC-20s to a SQLite database, but you can customize this behavior for your application.
+  - `initialize_agent` creates (or loads) an agent from CDP Wallet Data.
+  - `run_agent` invokes the agent.
+  - `handle_action_agent` handles agent actions - in our demo, we just save the addresses of deployed NFTs and ERC-20s to a SQLite database, but you can customize this behavior for your application.
 - The `agent.custom_actions` module contains an example for adding custom actions to the agent.
-    - `get_latest_block` is a custom action we've added that retrieves the latest Base Sepolia block information for the agent.
-    - You can add additional custom actions to this module, following our example.
+  - `get_latest_block` is a custom action we've added that retrieves the latest Base Sepolia block information for the agent.
+  - You can add additional custom actions to this module, following our example.
 
 ## Key Features
 
@@ -56,11 +56,13 @@ NETWORK_ID=base-sepolia
 ## Installation
 
 1. Install dependencies:
+
 ```bash
 poetry install
 ```
 
 2. Start the development server:
+
 ```bash
 poetry run python index.py
 ```
@@ -92,11 +94,10 @@ curl -X POST http://localhost:5000/api/chat \
   -d '{"input": "deploy a new ERC-20 token", "conversation_id": 0}'
 ```
 
-
 Retrieve a list of NFTs deployed by the agent:
 
 ```bash
-curl http://localhost:5000/nfts 
+curl http://localhost:5000/nfts
 ```
 
 Retrieve a list of ERC-20s deployed by the agent:
@@ -111,6 +112,7 @@ curl http://localhost:5000/tokens
 - [Backend Template](https://replit.com/@alissacrane1/onchain-agent-demo-backend?v=1)
 
 Steps:
+
 - Sign up for a Replit account, or login to your existing one.
 - Navigate to the template links, and click `Use Template` on the top right hand side.
 - Under `Secrets` in `Workspace Features`, add the environment variables below.
@@ -119,6 +121,7 @@ Steps:
   - Tip: Deploy your backend first, as you'll need the deployment URL for the frontend's `NEXT_PUBLIC_API_URL` environment variable.
 
 **Backend**
+
 ```
 {
   "CDP_API_KEY_NAME": "get this from https://portal.cdp.coinbase.com/projects/api-keys",
@@ -131,6 +134,7 @@ Steps:
 **Important: Replit resets the SQLite template on every deployment, before sending funds to your agent or using it on Mainnet be sure to read [Agent Wallet](#agent-wallet) and save your wallet ID and seed in a safe place.**
 
 **Frontend**
+
 ```
 {
   "NEXT_PUBLIC_API_URL": "your backend deployment URL here"
@@ -144,3 +148,57 @@ See [LICENSE.md](LICENSE.md) for details.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
+
+## Troubleshooting
+
+### CDP SDK Authentication Issues
+
+If you encounter authentication errors with the CDP SDK like the following:
+
+```
+Could not deserialize key data. The data may be in an incorrect format, the provided password may be incorrect, it may be encrypted with an unsupported algorithm, or it may be an unsupported key type (e.g. EC curves with explicit parameters).
+```
+
+This is typically caused by issues with how the private key is formatted or passed to the SDK. Here are two ways to resolve this:
+
+#### Method 1: Using JSON File (Recommended)
+
+1. Download the API key JSON file from the [CDP Portal](https://portal.cdp.coinbase.com/projects/api-keys)
+2. Save it as `cdp_api_key.json` in your project root
+3. Use the following code to configure the SDK:
+
+```python
+with open("cdp_api_key.json") as f:
+    config = json.load(f)
+
+values = {
+    "cdp_api_key_name": config['name'],
+    "cdp_api_key_private_key": config['privateKey']
+}
+
+agentkit = CdpAgentkitWrapper(**values)
+```
+
+#### Method 2: Using Environment Variables
+
+If you prefer using environment variables, ensure they are formatted exactly as follows:
+
+```bash
+CDP_API_KEY_NAME="organizations/your-org-id/apiKeys/your-key-id"
+CDP_API_KEY_PRIVATE_KEY="-----BEGIN EC PRIVATE KEY-----\nyour-key-data\n-----END EC PRIVATE KEY-----\n"
+```
+
+Note: Some OS/terminals don't handle newline literals (`\n`) well in environment variables. In such cases, use Method 1 instead.
+
+## Running the Server
+
+To run the server:
+
+```bash
+PYTHONPATH=. FLASK_RUN_PORT=5001 poetry run python src/agent_backend/index.py
+```
+
+Note: On macOS, port 5000 is often used by AirPlay Receiver. If you encounter a port conflict, you can:
+
+1. Use a different port by setting `FLASK_RUN_PORT` (as shown above)
+2. Disable AirPlay Receiver in System Preferences -> General -> AirDrop & Handoff

@@ -4,3 +4,5 @@
 /agent/__pycache__
 /db/__pycache__
 /agent/custom_Actions/__pycache__
+
+cdp_api_key.json

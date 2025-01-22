@@ -1,12 +1,13 @@
 from flask import Flask, request, Response, stream_with_context, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+import os
 
-from agent.initialize_agent import initialize_agent
-from agent.run_agent import run_agent
-from db.setup import setup
-from db.tokens import get_tokens
-from db.nfts import get_nfts
+from agent_backend.agent.initialize_agent import initialize_agent
+from agent_backend.agent.run_agent import run_agent
+from agent_backend.db.setup import setup
+from agent_backend.db.tokens import get_tokens
+from agent_backend.db.nfts import get_nfts
 
 load_dotenv()
 app = Flask(__name__)
@@ -63,5 +64,6 @@ def nfts():
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 if __name__ == "__main__":
-    app.run()
+    setup()
+    app.run(host="0.0.0.0", port=int(os.environ.get("FLASK_RUN_PORT", 5000)))
     
