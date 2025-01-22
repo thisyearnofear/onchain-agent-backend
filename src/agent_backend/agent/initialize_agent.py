@@ -64,21 +64,31 @@ def initialize_agent() -> AgentExecutor:
     settings = get_settings()
     
     # Get CDP configuration from environment variables
-    cdp_config = {
-        "name": os.getenv("CDP_API_KEY_NAME"),
-        "privateKey": os.getenv("CDP_API_KEY_PRIVATE_KEY")
-    }
+    cdp_api_key_name = os.getenv("CDP_API_KEY_NAME")
+    cdp_api_key_private_key = os.getenv("CDP_API_KEY_PRIVATE_KEY")
     
-    if not cdp_config["name"] or not cdp_config["privateKey"]:
+    if not cdp_api_key_name or not cdp_api_key_private_key:
         raise ValueError("CDP_API_KEY_NAME and CDP_API_KEY_PRIVATE_KEY environment variables must be set")
 
-    # Configure CDP SDK
+    # Format the private key properly
+    if not cdp_api_key_private_key.startswith("-----BEGIN EC PRIVATE KEY-----"):
+        # If the key doesn't have the proper format, add it
+        formatted_key = "-----BEGIN EC PRIVATE KEY-----\n"
+        formatted_key += cdp_api_key_private_key.replace("\\n", "\n")
+        if not formatted_key.endswith("\n-----END EC PRIVATE KEY-----"):
+            formatted_key += "\n-----END EC PRIVATE KEY-----"
+        cdp_api_key_private_key = formatted_key
+
     logger.info("Configuring CDP SDK...")
-    Cdp.configure(cdp_config["name"], cdp_config["privateKey"])
-    logger.info("CDP SDK configured successfully")
+    try:
+        Cdp.configure(cdp_api_key_name, cdp_api_key_private_key)
+        logger.info("CDP SDK configured successfully")
+    except Exception as e:
+        logger.error(f"Failed to configure CDP SDK: {str(e)}")
+        raise
 
     # Initialize wallet
-    wallet = initialize_wallet(cdp_config)
+    wallet = initialize_wallet({"name": cdp_api_key_name, "privateKey": cdp_api_key_private_key})
     logger.info(f"Using wallet:")
     logger.info(f"- ID: {wallet.id}")
     logger.info(f"- Network: {wallet.network_id}")
@@ -86,8 +96,8 @@ def initialize_agent() -> AgentExecutor:
 
     # Initialize the CDP Agentkit wrapper with the wallet
     values = {
-        "cdp_api_key_name": cdp_config['name'],
-        "cdp_api_key_private_key": cdp_config['privateKey'],
+        "cdp_api_key_name": cdp_api_key_name,
+        "cdp_api_key_private_key": cdp_api_key_private_key,
         "wallet": wallet
     }
     
