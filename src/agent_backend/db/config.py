@@ -11,8 +11,8 @@ load_dotenv()
 
 def get_database_url() -> str:
     """Get the database URL based on the environment."""
-    # Check if we're in production
-    if os.getenv('ENVIRONMENT') == 'production':
+    # Check if we're in production (Render sets this automatically)
+    if os.getenv('RENDER'):
         user = os.getenv("POSTGRES_USER", "postgres")
         password = os.getenv("POSTGRES_PASSWORD", "postgres")
         host = os.getenv("POSTGRES_HOST", "localhost")
@@ -24,11 +24,12 @@ def get_database_url() -> str:
 
 def get_engine_options() -> dict:
     """Get SQLAlchemy engine options based on the environment."""
-    if os.getenv('ENVIRONMENT') == 'production':
+    if os.getenv('RENDER'):
         return {
-            "pool_size": int(os.getenv("DB_POOL_SIZE", "5")),
-            "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "10")),
-            "pool_timeout": int(os.getenv("DB_POOL_TIMEOUT", "30")),
-            "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", "1800")),
+            "pool_size": 3,  # Reduced pool size for Render free tier
+            "max_overflow": 5,  # Reduced max overflow
+            "pool_timeout": 30,
+            "pool_recycle": 1800,
+            "pool_pre_ping": True,  # Enable connection health checks
         }
     return {} 

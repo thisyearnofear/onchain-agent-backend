@@ -146,19 +146,24 @@ def health_check():
     try:
         # Check database connection
         engine = get_engine()
+        app.logger.info("Attempting database connection check...")
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+            app.logger.info("Database connection successful")
         
         return jsonify({
             "status": "healthy",
             "database": "connected",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
+            "environment": "production" if os.getenv('RENDER') else "development"
         }), 200
     except Exception as e:
+        app.logger.error(f"Health check failed: {str(e)}")
         return jsonify({
             "status": "unhealthy",
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
+            "environment": "production" if os.getenv('RENDER') else "development"
         }), 500
 
 if __name__ == "__main__":

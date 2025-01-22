@@ -560,3 +560,76 @@ docker compose down
    - Ensure credential files exist
    - Check file permissions
    - Verify volume paths
+
+## Deployment Status
+
+- **Environment**: Production
+- **Platform**: Render
+- **Service Type**: Docker Container
+- **Database**: PostgreSQL (Render Managed)
+- **Workers**: 2 Gunicorn workers
+- **Memory**: 512MB (Starter Plan)
+- **Health Check**: `/health` endpoint
+- **Auto Deploy**: Enabled from main branch
+
+## Testing the Deployment
+
+1. Health Check:
+
+```bash
+curl https://onchain-agent-backend.onrender.com/health
+```
+
+2. Test Chat Endpoint:
+
+```bash
+curl -X POST https://onchain-agent-backend.onrender.com/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"input": "What can you help me with?", "conversation_id": "test-1"}'
+```
+
+3. Check Rate Limits:
+
+```bash
+curl -I https://onchain-agent-backend.onrender.com/api/chat
+```
+
+## Monitoring
+
+1. View Logs:
+
+   - Visit Render Dashboard > onchain-agent-backend > Logs
+   - Filter by: `system`, `deploy`, or `runtime`
+
+2. Check System Health:
+
+   - Memory Usage: Render Dashboard > Metrics
+   - Database Status: Render Dashboard > onchain-agent-db > Metrics
+   - Worker Status: Look for "Booting worker" in logs
+
+3. Common Issues:
+   - Memory Limits: Watch for "WORKER TIMEOUT" or "SIGKILL" messages
+   - Database Connection: Check `/health` endpoint response
+   - Rate Limits: Monitor 429 responses in logs
+
+## Troubleshooting
+
+1. Memory Issues:
+
+   ```bash
+   # Check current memory usage
+   curl https://onchain-agent-backend.onrender.com/health | jq .memory_usage
+   ```
+
+2. Database Connection:
+
+   ```bash
+   # Verify database connectivity
+   curl https://onchain-agent-backend.onrender.com/health | jq .database_connected
+   ```
+
+3. Worker Status:
+   ```bash
+   # Check active workers
+   curl https://onchain-agent-backend.onrender.com/health | jq .workers
+   ```
