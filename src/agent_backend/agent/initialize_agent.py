@@ -126,14 +126,25 @@ def initialize_agent() -> AgentExecutor:
     # Configure CDP SDK with API key name and raw private key
     try:
         logger.info("Configuring CDP SDK...")
-        # The private key should be raw base64 without any formatting
-        # CDP SDK will handle the proper formatting internally
-        Cdp.configure(cdp_api_key_name, cdp_api_key_private_key.strip())
+        # Clean and validate the private key
+        private_key = cdp_api_key_private_key.strip()
+        logger.debug(f"Private key length: {len(private_key)}")
+        
+        # Ensure proper base64 padding
+        padding_needed = len(private_key) % 4
+        if padding_needed:
+            private_key = private_key.rstrip("=")  # Remove any existing padding
+            private_key += "=" * (4 - padding_needed)  # Add correct padding
+            logger.debug(f"Added {4 - padding_needed} padding characters")
+        
+        # Configure CDP SDK with the properly formatted key
+        Cdp.configure(cdp_api_key_name, private_key)
         logger.info("CDP SDK configured successfully")
             
     except Exception as e:
         logger.error(f"Failed to configure CDP SDK: {str(e)}")
         logger.error(f"CDP API Key Name: {cdp_api_key_name}")
+        logger.error(f"Private key length: {len(private_key) if 'private_key' in locals() else 'unknown'}")
         raise
 
     # Initialize wallet and create agent components

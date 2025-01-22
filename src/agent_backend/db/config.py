@@ -2,13 +2,17 @@
 
 import os
 from typing import Dict, Any
+from urllib.parse import urlparse
 
 def get_database_url() -> str:
     """Get database URL from environment variables."""
     # First try Render's internal database URL
     database_url = os.getenv("DATABASE_URL")
     if database_url:
-        return database_url
+        # Parse the URL to handle any special characters in password
+        parsed = urlparse(database_url)
+        # Reconstruct the URL with proper escaping
+        return f"postgresql://{parsed.username}:{parsed.password}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
         
     # Fallback to constructing URL from individual components
     host = os.getenv("POSTGRES_HOST", "localhost")
@@ -27,5 +31,5 @@ def get_engine_options() -> Dict[str, Any]:
         "max_overflow": 10,  # Allow some overflow connections
         "pool_timeout": 30,  # Connection timeout in seconds
         "pool_recycle": 1800,  # Recycle connections every 30 minutes
-        "echo": False,  # Set to True for SQL query logging
+        "echo": True,  # Enable SQL query logging for debugging
     } 
