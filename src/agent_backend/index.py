@@ -7,9 +7,10 @@ from dotenv import load_dotenv
 import os
 import json
 import time
+import threading
 from datetime import datetime
 from sqlalchemy import text
-import threading
+import concurrent.futures
 
 from agent_backend.agent.initialize_agent import initialize_agent
 from agent_backend.agent.run_agent import run_agent
@@ -35,9 +36,10 @@ app.logger.info("Setting up database...")
 setup()
 app.logger.info("Database setup complete")
 
-# Initialize the agent in a background thread
+# Initialize the agent in a background thread with timeout
 agent_executor = None
 initialization_error = None
+initialization_complete = threading.Event()
 
 def init_agent():
     global agent_executor, initialization_error
@@ -45,11 +47,15 @@ def init_agent():
         app.logger.info("Starting agent initialization...")
         agent_executor = initialize_agent()
         app.logger.info("Agent initialization complete")
+        initialization_complete.set()
     except Exception as e:
         app.logger.error(f"Failed to initialize agent: {str(e)}")
         initialization_error = str(e)
+        initialization_complete.set()
 
+# Start initialization in a background thread
 init_thread = threading.Thread(target=init_agent)
+init_thread.daemon = True  # Make thread daemon so it doesn't block shutdown
 init_thread.start()
 
 # Error handlers
@@ -79,10 +85,17 @@ def handle_internal_error(error):
 @app.route("/api/chat", methods=['GET', 'POST'])
 @limiter.limit("100/day;30/hour;1/second")
 def chat():
-    if not agent_executor:
-        if initialization_error:
-            return jsonify({"error": f"Agent initialization failed: {initialization_error}"}), 500
+    # Check if initialization is complete
+    if not initialization_complete.is_set():
         return jsonify({"error": "Agent is still initializing"}), 503
+    
+    # Check if initialization failed
+    if initialization_error:
+        return jsonify({"error": f"Agent initialization failed: {initialization_error}"}), 500
+    
+    # Check if agent is ready
+    if not agent_executor:
+        return jsonify({"error": "Agent is not properly initialized"}), 500
         
     if request.method == 'GET':
         def generate():
@@ -112,12 +125,12 @@ def chat():
         
         def generate():
             try:
-                for chunk in run_agent(validated_data['input'], app.agent_executor, {"configurable": {"thread_id": validated_data['conversation_id']}}):
+                for chunk in run_agent(validated_data['input'], agent_executor, {"configurable": {"thread_id": validated_data['conversation_id']}}):
                     if chunk.strip():
-                        print(f"Sending SSE message: {chunk}")  # Debug log
+                        app.logger.debug(f"Sending SSE message: {chunk}")
                         yield chunk
             except Exception as e:
-                # Handle any errors during generation
+                app.logger.error(f"Error during agent execution: {str(e)}")
                 error_data = {
                     "type": "error",
                     "content": str(e)
@@ -172,10 +185,11 @@ def health_check():
         
         # Check agent initialization status
         agent_status = "initializing"
-        if agent_executor:
-            agent_status = "ready"
-        elif initialization_error:
-            agent_status = f"failed: {initialization_error}"
+        if initialization_complete.is_set():
+            if agent_executor:
+                agent_status = "ready"
+            elif initialization_error:
+                agent_status = f"failed: {initialization_error}"
         
         return jsonify({
             "status": "healthy",

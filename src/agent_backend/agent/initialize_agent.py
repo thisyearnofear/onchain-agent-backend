@@ -95,22 +95,10 @@ def initialize_agent() -> AgentExecutor:
         logger.info("Private key formatted successfully")
         logger.debug(f"Formatted key preview: {formatted_key[:50]}...")
         
-        # Configure CDP SDK with timeout
+        # Configure CDP SDK
         logger.info("Configuring CDP SDK...")
-        import signal
-        
-        def timeout_handler(signum, frame):
-            raise TimeoutError("CDP initialization timed out after 30 seconds")
-        
-        # Set timeout for CDP initialization
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(30)  # 30 second timeout
-        
-        try:
-            Cdp.configure(cdp_api_key_name, formatted_key)
-            logger.info("CDP SDK configured successfully")
-        finally:
-            signal.alarm(0)  # Disable the alarm
+        Cdp.configure(cdp_api_key_name, formatted_key)
+        logger.info("CDP SDK configured successfully")
             
     except Exception as e:
         logger.error(f"Failed to configure CDP SDK: {str(e)}")
