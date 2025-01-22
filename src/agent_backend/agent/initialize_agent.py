@@ -64,7 +64,7 @@ def format_private_key(key: str) -> str:
     logger.debug("Input key length: %d", len(key))
     clean_key = key.strip()
     logger.debug("Stripped key length: %d", len(clean_key))
-    
+
     # If the key already has headers, extract just the base64 part
     if "-----BEGIN EC PRIVATE KEY-----" in clean_key:
         logger.debug("Key contains PEM headers, extracting base64 part")
@@ -74,13 +74,19 @@ def format_private_key(key: str) -> str:
                 clean_key = part.strip()
                 logger.debug("Extracted base64 part length: %d", len(clean_key))
                 break
-    
+
     # Remove any escaped newlines and actual newlines
     original_length = len(clean_key)
     clean_key = clean_key.replace("\\n", "").replace("\n", "")
     if len(clean_key) != original_length:
         logger.debug("Removed %d newline characters", original_length - len(clean_key))
-    
+
+    # Add padding if needed
+    padding_needed = len(clean_key) % 4
+    if padding_needed:
+        clean_key += "=" * (4 - padding_needed)
+        logger.debug("Added %d padding characters", 4 - padding_needed)
+
     # Validate the key is proper base64
     import base64
     try:
@@ -89,7 +95,10 @@ def format_private_key(key: str) -> str:
     except Exception as e:
         logger.error(f"Invalid base64 in private key: {str(e)}")
         logger.error("Key content: %s", clean_key)
-        raise ValueError("Private key is not valid base64")
+        raise ValueError("Private key is not valid base64") from e
+
+    # Remove the padding for the final formatted key
+    clean_key = clean_key.rstrip("=")
     
     # Build the formatted key with proper PEM structure
     formatted_lines = ["-----BEGIN EC PRIVATE KEY-----"]
@@ -97,7 +106,7 @@ def format_private_key(key: str) -> str:
         clean_key[i:i + 64] for i in range(0, len(clean_key), 64)
     )
     formatted_lines.append("-----END EC PRIVATE KEY-----")
-    
+
     result = "\n".join(formatted_lines)
     logger.debug("Final formatted key length: %d", len(result))
     return result
