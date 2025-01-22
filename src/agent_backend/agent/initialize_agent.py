@@ -59,6 +59,24 @@ def initialize_wallet(config: Dict[str, str]) -> Wallet:
         logger.error(f"Failed to create development wallet: {e}")
         raise
 
+def format_private_key(key: str) -> str:
+    """Format the private key with proper PEM headers and line breaks."""
+    # Remove any existing headers/footers and whitespace
+    clean_key = key.replace("-----BEGIN EC PRIVATE KEY-----", "")
+    clean_key = clean_key.replace("-----END EC PRIVATE KEY-----", "")
+    clean_key = clean_key.replace("\\n", "")
+    clean_key = clean_key.replace("\n", "")
+    clean_key = clean_key.strip()
+    
+    # Format with proper headers and line breaks
+    formatted_key = "-----BEGIN EC PRIVATE KEY-----\n"
+    # Split the key into 64-character chunks
+    chunks = [clean_key[i:i+64] for i in range(0, len(clean_key), 64)]
+    formatted_key += "\n".join(chunks)
+    formatted_key += "\n-----END EC PRIVATE KEY-----"
+    
+    return formatted_key
+
 def initialize_agent() -> AgentExecutor:
     """Initialize the agent with the CDP configuration and tools."""
     settings = get_settings()
@@ -70,25 +88,27 @@ def initialize_agent() -> AgentExecutor:
     if not cdp_api_key_name or not cdp_api_key_private_key:
         raise ValueError("CDP_API_KEY_NAME and CDP_API_KEY_PRIVATE_KEY environment variables must be set")
 
-    # Format the private key properly
-    if not cdp_api_key_private_key.startswith("-----BEGIN EC PRIVATE KEY-----"):
-        # If the key doesn't have the proper format, add it
-        formatted_key = "-----BEGIN EC PRIVATE KEY-----\n"
-        formatted_key += cdp_api_key_private_key.replace("\\n", "\n")
-        if not formatted_key.endswith("\n-----END EC PRIVATE KEY-----"):
-            formatted_key += "\n-----END EC PRIVATE KEY-----"
-        cdp_api_key_private_key = formatted_key
-
-    logger.info("Configuring CDP SDK...")
+    # Format the private key
     try:
-        Cdp.configure(cdp_api_key_name, cdp_api_key_private_key)
+        logger.info("Formatting CDP private key...")
+        formatted_key = format_private_key(cdp_api_key_private_key)
+        logger.info("Private key formatted successfully")
+        
+        # Configure CDP SDK
+        logger.info("Configuring CDP SDK...")
+        Cdp.configure(cdp_api_key_name, formatted_key)
         logger.info("CDP SDK configured successfully")
     except Exception as e:
         logger.error(f"Failed to configure CDP SDK: {str(e)}")
+        logger.error(f"CDP API Key Name: {cdp_api_key_name}")
+        # Log the first and last 10 characters of the key for debugging
+        if cdp_api_key_private_key:
+            key_preview = f"{cdp_api_key_private_key[:10]}...{cdp_api_key_private_key[-10:]}"
+            logger.error(f"Private Key Preview: {key_preview}")
         raise
 
     # Initialize wallet
-    wallet = initialize_wallet({"name": cdp_api_key_name, "privateKey": cdp_api_key_private_key})
+    wallet = initialize_wallet({"name": cdp_api_key_name, "privateKey": formatted_key})
     logger.info(f"Using wallet:")
     logger.info(f"- ID: {wallet.id}")
     logger.info(f"- Network: {wallet.network_id}")
@@ -97,7 +117,7 @@ def initialize_agent() -> AgentExecutor:
     # Initialize the CDP Agentkit wrapper with the wallet
     values = {
         "cdp_api_key_name": cdp_api_key_name,
-        "cdp_api_key_private_key": cdp_api_key_private_key,
+        "cdp_api_key_private_key": formatted_key,
         "wallet": wallet
     }
     
