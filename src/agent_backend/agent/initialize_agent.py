@@ -74,14 +74,15 @@ def initialize_agent() -> AgentExecutor:
     
     # Get CDP configuration from environment variables
     cdp_api_key_name = os.getenv("CDP_API_KEY_NAME")
+    cdp_api_key_private_key = os.getenv("CDP_API_KEY_PRIVATE_KEY")
     
-    if not cdp_api_key_name:
-        raise ValueError("CDP_API_KEY_NAME environment variable must be set")
+    if not cdp_api_key_name or not cdp_api_key_private_key:
+        raise ValueError("CDP_API_KEY_NAME and CDP_API_KEY_PRIVATE_KEY environment variables must be set")
 
-    # Configure CDP SDK with just the API key name for Coinbase-Managed wallets
+    # Configure CDP SDK with both API key name and private key
     try:
         logger.info("Configuring CDP SDK...")
-        Cdp.configure(cdp_api_key_name)
+        Cdp.configure(cdp_api_key_name, cdp_api_key_private_key)
         logger.info("CDP SDK configured successfully")
             
     except Exception as e:
