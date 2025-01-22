@@ -38,77 +38,47 @@ def initialize_wallet(config: Dict[str, str]) -> Wallet:
             logger.error(f"Failed to load production wallet: {e}")
             raise
     
-    # Development mode
-    logger.info("Development mode: Managing development wallet")
-    
-    # Try to load existing development wallet
+    # Development mode - create a new wallet if none exists
+    logger.info("Development mode: Creating new wallet")
     try:
-        current_dir = Path(__file__).parent.parent.parent.parent
-        seed_path = current_dir / "dev_wallet_seed.json"
+        wallet = Wallet.create()
+        logger.info(f"Created new development wallet: {wallet.id}")
         
-        if seed_path.exists():
-            logger.info("Found existing development wallet seed")
-            # Load wallet data to get ID
-            with open(current_dir / "wallet_credentials.json") as f:
-                creds = json.load(f)
-                wallet_id = creds["wallet_id"]
-            
-            # First fetch the unhydrated wallet
-            wallet = Wallet.fetch(wallet_id)
-            # Then hydrate it with the saved seed
-            wallet.load_seed_from_file(str(seed_path))
-            logger.info(f"Successfully loaded development wallet: {wallet.id}")
-            return wallet
-            
-    except Exception as e:
-        logger.info(f"Could not load existing development wallet: {e}")
-    
-    # Create new development wallet
-    logger.info("Creating new development wallet")
-    wallet = Wallet.create()
-    
-    # Save development wallet data
-    try:
-        # Save the seed
-        seed_path = current_dir / "dev_wallet_seed.json"
-        wallet.save_seed_to_file(str(seed_path), encrypt=True)
-        
-        # Save wallet credentials
-        creds = {
+        # Save wallet info to database
+        wallet_info = {
             "wallet_id": wallet.id,
             "network": wallet.network_id,
             "default_address": wallet.default_address.address_id,
             "addresses": [addr.address_id for addr in wallet.addresses]
         }
-        with open(current_dir / "wallet_credentials.json", "w") as f:
-            json.dump(creds, f, indent=2)
-            
-        logger.info(f"Saved new development wallet: {wallet.id}")
+        save_wallet_info(wallet.id, wallet_info)
+        logger.info("Saved wallet info to database")
+        
+        return wallet
     except Exception as e:
-        logger.warning(f"Failed to save development wallet data: {e}")
-    
-    return wallet
+        logger.error(f"Failed to create development wallet: {e}")
+        raise
 
 def initialize_agent() -> AgentExecutor:
     """Initialize the agent with the CDP configuration and tools."""
     settings = get_settings()
     
-    # Get the absolute path to the JSON file
-    current_dir = Path(__file__).parent.parent.parent.parent
-    json_path = current_dir / "cdp_api_key.json"
-    logger.info(f"Loading CDP config from: {json_path}")
-
-    # Read and parse the JSON file
-    with open(json_path) as f:
-        config = json.load(f)
+    # Get CDP configuration from environment variables
+    cdp_config = {
+        "name": os.getenv("CDP_API_KEY_NAME"),
+        "privateKey": os.getenv("CDP_API_KEY_PRIVATE_KEY")
+    }
+    
+    if not cdp_config["name"] or not cdp_config["privateKey"]:
+        raise ValueError("CDP_API_KEY_NAME and CDP_API_KEY_PRIVATE_KEY environment variables must be set")
 
     # Configure CDP SDK
     logger.info("Configuring CDP SDK...")
-    Cdp.configure(config["name"], config["privateKey"])
+    Cdp.configure(cdp_config["name"], cdp_config["privateKey"])
     logger.info("CDP SDK configured successfully")
 
     # Initialize wallet
-    wallet = initialize_wallet(config)
+    wallet = initialize_wallet(cdp_config)
     logger.info(f"Using wallet:")
     logger.info(f"- ID: {wallet.id}")
     logger.info(f"- Network: {wallet.network_id}")
@@ -116,8 +86,8 @@ def initialize_agent() -> AgentExecutor:
 
     # Initialize the CDP Agentkit wrapper with the wallet
     values = {
-        "cdp_api_key_name": config['name'],
-        "cdp_api_key_private_key": config['privateKey'],
+        "cdp_api_key_name": cdp_config['name'],
+        "cdp_api_key_private_key": cdp_config['privateKey'],
         "wallet": wallet
     }
     

@@ -13,10 +13,15 @@ def get_database_url() -> str:
     """Get the database URL based on the environment."""
     # Check if we're in production (Render sets this automatically)
     if os.getenv('RENDER'):
-        user = os.getenv("POSTGRES_USER", "postgres")
-        password = os.getenv("POSTGRES_PASSWORD", "postgres")
-        host = os.getenv("POSTGRES_HOST", "localhost")
-        db = os.getenv("POSTGRES_DB", "onchain_agent")
+        user = os.getenv("POSTGRES_USER")
+        password = os.getenv("POSTGRES_PASSWORD")
+        host = os.getenv("POSTGRES_HOST")
+        db = os.getenv("POSTGRES_DB")
+        
+        if not all([user, password, host, db]):
+            raise ValueError("Missing required database configuration. Please set POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, and POSTGRES_DB")
+            
+        # Construct the URL without trying to parse host/port
         return f"postgresql://{user}:{password}@{host}/{db}"
     
     # Development: Use SQLite with the original agent.db file
