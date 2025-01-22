@@ -32,5 +32,5 @@ ENV PYTHONPATH=/app/src
 # Expose port
 EXPOSE 5001
 
-# Run the application with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "4", "--timeout", "120", "src.agent_backend.index:app"] 
+# Run the application
+CMD ["gunicorn", "--workers=2", "--timeout=120", "--bind=0.0.0.0:$PORT", "--log-level=info", "--worker-class=sync", "--worker-tmp-dir=/dev/shm", "src.agent_backend.index:app"] 

@@ -24,6 +24,80 @@ To run with Docker:
 docker compose up -d
 ```
 
+## Production Deployment (Render)
+
+1. Fork/push this repository to your GitHub account
+
+2. Create a new Web Service on Render:
+
+   - Connect your GitHub repository
+   - Select "Docker" as the environment
+   - Set the following:
+     - Name: onchain-agent-backend
+     - Branch: main
+     - Root Directory: ./
+     - Docker Command: leave empty (uses CMD from Dockerfile)
+
+3. Add Environment Variables:
+
+   - Copy variables from `.env.example`
+   - Add them in Render's environment variables section
+   - For the database URL, use the Internal Database URL from your Render PostgreSQL service
+
+4. Create a PostgreSQL Database:
+
+   - Go to "New +" → "PostgreSQL"
+   - Name: onchain-agent-db
+   - Copy the Internal Database URL
+
+5. Health Check:
+   - Render automatically uses the `/health` endpoint
+   - Verify status at: `https://your-service.onrender.com/health`
+
+## Features & Status
+
+### Phase 1: Production Infrastructure ✅
+
+- [x] Dockerfile with proper configuration
+- [x] Production Docker Compose setup
+- [x] Environment variable management
+- [x] Health check endpoints
+- [x] PostgreSQL integration
+
+### Phase 2: Security & Monitoring ✅
+
+- [x] Rate limiting (200/day, 50/hour per IP)
+- [x] Request validation
+- [x] CORS setup
+- [x] Logging configuration
+- [x] Health monitoring
+- [x] Global error handlers
+
+Future Improvements:
+
+- [ ] Authentication system
+- [ ] API key management
+- [ ] Request encryption
+- [ ] Advanced monitoring
+- [ ] Audit logging
+
+### Phase 3: Deployment & Scaling ✅
+
+- [x] CI/CD Pipeline with GitHub Actions
+  - Automated tests on push/PR
+  - Docker build and push
+- [x] Production deployment on Render
+  - Automatic SSL/TLS
+  - Zero-downtime deployments
+  - Database backups
+- [x] Infrastructure documentation
+
+## Environment Variables
+
+See `.env.example` for required environment variables.
+
+## Docker
+
 The production Docker setup includes:
 
 - Memory limits (1GB for app, 512MB for PostgreSQL)
