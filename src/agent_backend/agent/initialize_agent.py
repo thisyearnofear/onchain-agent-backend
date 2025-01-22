@@ -23,16 +23,26 @@ from agent_backend.db.wallet import save_wallet_info, get_wallet_info
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+def save_development_wallet(wallet: Wallet) -> None:
+    """Save development wallet information to database."""
+    wallet_info = {
+        "wallet_id": wallet.id,
+        "network": wallet.network_id,
+        "default_address": wallet.default_address.address_id,
+        "addresses": [addr.address_id for addr in wallet.addresses]
+    }
+    save_wallet_info(wallet.id, wallet_info)
+    logger.info("Saved wallet info to database")
+
 def initialize_wallet(config: Dict[str, str]) -> Wallet:
     """Initialize wallet based on environment (development or production)."""
-    # Check for production wallet configuration
     wallet_id = os.getenv(WALLET_ID_ENV_VAR)
     
     if wallet_id:
         logger.info(f"Production mode: Loading wallet {wallet_id}")
         try:
             wallet = Wallet.fetch(wallet_id)
-            logger.info(f"Successfully loaded production wallet")
+            logger.info("Successfully loaded production wallet")
             return wallet
         except Exception as e:
             logger.error(f"Failed to load production wallet: {e}")
@@ -43,17 +53,7 @@ def initialize_wallet(config: Dict[str, str]) -> Wallet:
     try:
         wallet = Wallet.create()
         logger.info(f"Created new development wallet: {wallet.id}")
-        
-        # Save wallet info to database
-        wallet_info = {
-            "wallet_id": wallet.id,
-            "network": wallet.network_id,
-            "default_address": wallet.default_address.address_id,
-            "addresses": [addr.address_id for addr in wallet.addresses]
-        }
-        save_wallet_info(wallet.id, wallet_info)
-        logger.info("Saved wallet info to database")
-        
+        save_development_wallet(wallet)
         return wallet
     except Exception as e:
         logger.error(f"Failed to create development wallet: {e}")
@@ -61,21 +61,46 @@ def initialize_wallet(config: Dict[str, str]) -> Wallet:
 
 def format_private_key(key: str) -> str:
     """Format the private key with proper PEM headers and line breaks."""
-    # Remove any existing headers/footers and whitespace
-    clean_key = key.replace("-----BEGIN EC PRIVATE KEY-----", "")
-    clean_key = clean_key.replace("-----END EC PRIVATE KEY-----", "")
-    clean_key = clean_key.replace("\\n", "")
-    clean_key = clean_key.replace("\n", "")
-    clean_key = clean_key.strip()
+    logger.debug("Input key length: %d", len(key))
+    clean_key = key.strip()
+    logger.debug("Stripped key length: %d", len(clean_key))
     
-    # Format with proper headers and line breaks
-    formatted_key = "-----BEGIN EC PRIVATE KEY-----\n"
-    # Split the key into 64-character chunks
-    chunks = [clean_key[i:i+64] for i in range(0, len(clean_key), 64)]
-    formatted_key += "\n".join(chunks)
-    formatted_key += "\n-----END EC PRIVATE KEY-----"
+    # If the key already has headers, extract just the base64 part
+    if "-----BEGIN EC PRIVATE KEY-----" in clean_key:
+        logger.debug("Key contains PEM headers, extracting base64 part")
+        parts = clean_key.split("-----")
+        for part in parts:
+            if not part.startswith("BEGIN") and not part.startswith("END") and part.strip():
+                clean_key = part.strip()
+                logger.debug("Extracted base64 part length: %d", len(clean_key))
+                break
     
-    return formatted_key
+    # Remove any escaped newlines and actual newlines
+    original_length = len(clean_key)
+    clean_key = clean_key.replace("\\n", "").replace("\n", "")
+    if len(clean_key) != original_length:
+        logger.debug("Removed %d newline characters", original_length - len(clean_key))
+    
+    # Validate the key is proper base64
+    import base64
+    try:
+        decoded = base64.b64decode(clean_key)
+        logger.debug("Successfully decoded base64 key (length: %d bytes)", len(decoded))
+    except Exception as e:
+        logger.error(f"Invalid base64 in private key: {str(e)}")
+        logger.error("Key content: %s", clean_key)
+        raise ValueError("Private key is not valid base64")
+    
+    # Build the formatted key with proper PEM structure
+    formatted_lines = ["-----BEGIN EC PRIVATE KEY-----"]
+    formatted_lines.extend(
+        clean_key[i:i + 64] for i in range(0, len(clean_key), 64)
+    )
+    formatted_lines.append("-----END EC PRIVATE KEY-----")
+    
+    result = "\n".join(formatted_lines)
+    logger.debug("Final formatted key length: %d", len(result))
+    return result
 
 def initialize_agent() -> AgentExecutor:
     """Initialize the agent with the CDP configuration and tools."""
@@ -91,9 +116,15 @@ def initialize_agent() -> AgentExecutor:
     # Format the private key
     try:
         logger.info("Formatting CDP private key...")
+        logger.debug("Raw key length: %d", len(cdp_api_key_private_key))
+        logger.debug("Raw key starts with: %s", cdp_api_key_private_key[:20])
+        
         formatted_key = format_private_key(cdp_api_key_private_key)
         logger.info("Private key formatted successfully")
-        logger.debug(f"Formatted key preview: {formatted_key[:50]}...")
+        logger.debug("Formatted key length: %d", len(formatted_key))
+        logger.debug("Formatted key structure:")
+        for line in formatted_key.split("\n"):
+            logger.debug("  %s", f"{line[:10]}..." if len(line) > 10 else line)
         
         # Configure CDP SDK
         logger.info("Configuring CDP SDK...")
@@ -103,20 +134,18 @@ def initialize_agent() -> AgentExecutor:
     except Exception as e:
         logger.error(f"Failed to configure CDP SDK: {str(e)}")
         logger.error(f"CDP API Key Name: {cdp_api_key_name}")
-        # Log the first and last 10 characters of the key for debugging
         if cdp_api_key_private_key:
             key_preview = f"{cdp_api_key_private_key[:10]}...{cdp_api_key_private_key[-10:]}"
             logger.error(f"Private Key Preview: {key_preview}")
         raise
 
-    # Initialize wallet
+    # Initialize wallet and create agent components
     wallet = initialize_wallet({"name": cdp_api_key_name, "privateKey": formatted_key})
-    logger.info(f"Using wallet:")
+    logger.info("Using wallet:")
     logger.info(f"- ID: {wallet.id}")
     logger.info(f"- Network: {wallet.network_id}")
     logger.info(f"- Default Address: {wallet.default_address.address_id}")
 
-    # Initialize the CDP Agentkit wrapper with the wallet
     values = {
         "cdp_api_key_name": cdp_api_key_name,
         "cdp_api_key_private_key": formatted_key,
@@ -127,40 +156,30 @@ def initialize_agent() -> AgentExecutor:
     agentkit = CdpAgentkitWrapper(**values)
     logger.info("CDP Agentkit wrapper initialized successfully")
 
-    # Initialize LLM
-    llm = ChatOpenAI(
-        model=AGENT_MODEL,
-        temperature=0
-    )
-
-    # Create tools from CDP actions
-    tools = []
-    for action in CDP_ACTIONS:
-        tool = CdpTool(
+    # Initialize LLM and tools
+    llm = ChatOpenAI(model=AGENT_MODEL, temperature=0)
+    tools = [
+        CdpTool(
             name=action.name,
             description=action.description,
             func=action.func,
             args_schema=action.args_schema,
             cdp_agentkit_wrapper=agentkit
         )
-        tools.append(tool)
+        for action in CDP_ACTIONS
+    ]
     
     logger.info(f"Created {len(tools)} tools from CDP actions")
-    
-    # Format tools for OpenAI functions
     tool_functions = [format_tool_to_openai_function(t) for t in tools]
     
-    # Create the prompt template
+    # Create the prompt template and agent
     prompt = ChatPromptTemplate.from_messages([
         ("system", AGENT_PROMPT),
         MessagesPlaceholder(variable_name="messages"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ])
 
-    # Create the agent with tools as functions
     llm_with_tools = llm.bind(functions=tool_functions)
-    
-    # Create the agent
     agent = (
         {
             "messages": lambda x: x["messages"],
@@ -173,5 +192,4 @@ def initialize_agent() -> AgentExecutor:
         | OpenAIFunctionsAgentOutputParser()
     )
 
-    # Create the AgentExecutor
     return AgentExecutor(agent=agent, tools=tools, verbose=True)

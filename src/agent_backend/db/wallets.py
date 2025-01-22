@@ -24,7 +24,5 @@ def get_wallet(wallet_id: str) -> Optional[Dict]:
             text("SELECT data FROM wallets WHERE id = :id"),
             {"id": wallet_id}
         ).first()
-        
-        if result:
-            return json.loads(result[0])
-        return None 
+
+        return json.loads(result[0]) if result else None 
