@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: onchain-agent-backend
+    env: docker
+    region: oregon # Choose your preferred region
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: POSTGRES_DB
+        value: postgres
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: onchain-agent-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: onchain-agent-db
+          property: password
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: onchain-agent-db
+          property: host
+      - key: DATABASE_URL
+        fromDatabase:
+          name: onchain-agent-db
+          property: connectionString
+      - key: NETWORK_ID
+        value: base-sepolia
+    autoDeploy: true
+
+databases:
+  - name: onchain-agent-db
+    region: oregon
+    plan: starter
