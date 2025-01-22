@@ -4,6 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Your Name <first.last@example.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -12,13 +13,25 @@ langchain = "^0.3.6"
 langchain-openai = "^0.2.5"
 langgraph = "^0.2.42"
 pydantic = "^2.9.2"
-cdp-sdk = "^0.10.3"
+cdp-sdk = "^0.14.1"
 python-dotenv = "^1.0.1"
-cdp-langchain = "^0.0.4"
-cdp-agentkit-core = "^0.0.3"
+cdp-langchain = "^0.0.11"
+cdp-agentkit-core = "^0.0.9"
 flask-cors = "^5.0.0"
+psycopg2-binary = "^2.9.9"
+alembic = "^1.13.1"
+sqlalchemy = "^2.0.27"
+gunicorn = "^21.2.0"
+flask-limiter = "^3.5.0"
+marshmallow = "^3.20.2"
 
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+black = "^24.1.1"
+isort = "^5.13.2"
+flake8 = "^7.0.0"

@@ -1,8 +1,49 @@
+# Environment files
 .env
+.env.production
+.env.development
+.env.*
+!.env.example
 
-/__pycache__
-/agent/__pycache__
-/db/__pycache__
-/agent/custom_Actions/__pycache__
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
 
+# Development files
+agent.db
 cdp_api_key.json
+dev_wallet_seed.json
+wallet_credentials.json
+test_wallet.py
+test_db.py
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+.docker/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.replit
+
+# Build
+dist/
+build/
+*.log
+
+# Sensitive files
+*_credentials.json
+*_seed.json
+*_api_key.json

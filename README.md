@@ -1,59 +1,8 @@
-# Onchain Agent Backend Demo
+# Onchain Agent Backend
 
-![Token-creation](https://github.com/user-attachments/assets/016c26cd-c599-4f7c-bafd-c8090069b53e)
+This is the backend service for the Onchain Agent project. It provides API endpoints for interacting with the agent system.
 
-A web app that enables onchain interactions through a conversational UI using AgentKit, a collaboration between [CDP SDK](https://docs.cdp.coinbase.com/) and [OnchainKit](https://onchainkit.xyz).
-
-## Overview
-
-This project features a Python backend designed to work seamlessly with CDP's AgentKit backend. Together, they enable the creation of an AI agent capable of performing onchain operations on Base. The agent uses GPT-4 for natural language understanding and AgentKit for onchain interactions.
-
-## Modules
-
-- The `agent` module contains functions for interacting with the onchain agent.
-  - `initialize_agent` creates (or loads) an agent from CDP Wallet Data.
-  - `run_agent` invokes the agent.
-  - `handle_action_agent` handles agent actions - in our demo, we just save the addresses of deployed NFTs and ERC-20s to a SQLite database, but you can customize this behavior for your application.
-- The `agent.custom_actions` module contains an example for adding custom actions to the agent.
-  - `get_latest_block` is a custom action we've added that retrieves the latest Base Sepolia block information for the agent.
-  - You can add additional custom actions to this module, following our example.
-
-## Key Features
-
-- **AI-Powered Chat Interface**: Interactive chat interface for natural language interactions onchain
-- **Onchain Operations**: Ability to perform various blockchain operations through Agentkit:
-  - Deploy and interact with ERC-20 tokens
-  - Create and manage NFTs
-  - Check wallet balances
-  - Request funds from faucet
-- **Real-time Updates**: Server-Sent Events (SSE) for streaming responses
-- **Multi-language Support**: Built-in language selector for internationalization
-- **Responsive Design**: Modern UI built with Tailwind CSS
-- **Wallet Integration**: Secure wallet management through CDP Agentkit
-
-## Tech Stack
-
-- **Backend**: Python with Flask
-- **AI/ML**: LangChain, GPT-4
-- **Blockchain**: Coinbase Developer Platform (CDP) Agentkit
-
-## Prerequisites
-
-- [Rust](https://www.rust-lang.org/tools/install)
-- [Poetry](https://python-poetry.org/docs/#installation)
-
-## Environment Setup
-
-Create a `.env` file with the following variables:
-
-```bash
-CDP_API_KEY_NAME= # Create an API key at https://portal.cdp.coinbase.com/projects/api-keys
-CDP_API_KEY_PRIVATE_KEY="" # Create an API key at https://portal.cdp.coinbase.com/projects/api-keys
-OPENAI_API_KEY= # Get an API key from OpenAI - https://platform.openai.com/docs/quickstart
-NETWORK_ID=base-sepolia
-```
-
-## Installation
+## Setup
 
 1. Install dependencies:
 
@@ -61,144 +10,479 @@ NETWORK_ID=base-sepolia
 poetry install
 ```
 
-2. Start the development server:
+2. Run the development server:
 
 ```bash
-poetry run python index.py
+poetry run python -m src.agent_backend.index
 ```
 
-This will start the Python backend server.
+## Docker
 
-## Agent Wallet
-
-**Note**: when running your agent from the first time, the SDK will automatically generate a wallet for you. The wallet information will be logged to the console, and saved to the `wallets` table in the SQLite DB.
-
-**Important**: This is for demo purposes, and we do not recommend this approach for a production application. Please save your wallet information somewhere safe.
-
-Agents will by default be re-instantiated through the SQLite DB.
-
-You can also instantiate your agent from the following environment variables.
-
-```
-CDP_WALLET_ID="",
-CDP_WALLET_SEED=""
-```
-
-## API Usage
-
-The application exposes a chat endpoint that accepts natural language commands for blockchain interactions:
+To run with Docker:
 
 ```bash
-curl -X POST http://localhost:5000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"input": "deploy a new ERC-20 token", "conversation_id": 0}'
+docker compose up -d
 ```
 
-Retrieve a list of NFTs deployed by the agent:
+The production Docker setup includes:
+
+- Memory limits (1GB for app, 512MB for PostgreSQL)
+- Log rotation (10MB max size, 3 files kept)
+- Health checks for both services
+- Proper container dependencies
+- Python path configuration
+- Curl for health monitoring
+
+### Production Configuration
+
+The application is configured for production with:
+
+1. Resource Management:
+
+   - App Service: 1GB memory limit, 512MB reservation
+   - PostgreSQL: 512MB memory limit, 256MB reservation
+   - Log rotation: 10MB max size, 3 files retained
+
+2. Health Monitoring:
+
+   - App endpoint: `GET /health`
+   - PostgreSQL: `pg_isready` check
+   - Automatic restarts on failure
+   - Health check intervals: 30s for app, 5s for PostgreSQL
+
+3. Environment Configuration:
+
+   ```env
+   # PostgreSQL Configuration
+   POSTGRES_USER=postgres
+   POSTGRES_PASSWORD=postgres
+   POSTGRES_DB=onchain_agent
+   POSTGRES_HOST=postgres
+
+   # CDP Configuration
+   CDP_API_KEY_NAME=your_key_name
+   CDP_API_KEY_PRIVATE_KEY=your_private_key
+
+   # OpenAI Configuration
+   OPENAI_API_KEY=your_openai_key
+
+   # Server Configuration
+   FLASK_RUN_PORT=5001
+   ENVIRONMENT=production
+   ```
+
+4. Volume Management:
+   - PostgreSQL data persistence
+   - CDP API key mounting
+   - Wallet credentials persistence
+
+## Features
+
+- AI-powered blockchain operations
+- Automated wallet management for development and production
+- Support for ERC-20 token and NFT deployment
+- Testnet fund management
+- Balance checking capabilities
+
+## Development Setup
+
+### Prerequisites
+
+- Python 3.10+
+- Poetry
+- Docker Desktop
+- PostgreSQL (for production)
+
+### Installation
+
+1. Install dependencies:
 
 ```bash
-curl http://localhost:5000/nfts
+poetry install
 ```
 
-Retrieve a list of ERC-20s deployed by the agent:
+2. Set up environment variables in `.env`:
+
+```env
+# PostgreSQL Configuration (for production)
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=onchain_agent
+POSTGRES_HOST=localhost
+
+# CDP Configuration
+CDP_API_KEY_NAME=your_key_name
+CDP_API_KEY_PRIVATE_KEY=your_private_key
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_key
+
+# Server Configuration
+FLASK_RUN_PORT=5001
+```
+
+3. Start the server:
 
 ```bash
-curl http://localhost:5000/tokens
+PYTHONPATH=. poetry run python src/agent_backend/index.py
 ```
 
-## Deploying to Replit
+## Database Configuration
 
-- [Frontend Template](https://replit.com/@alissacrane1/onchain-agent-demo-frontend?v=1)
-- [Backend Template](https://replit.com/@alissacrane1/onchain-agent-demo-backend?v=1)
+The application supports both SQLite (development) and PostgreSQL (production) databases:
 
-Steps:
+### Development Mode
 
-- Sign up for a Replit account, or login to your existing one.
-- Navigate to the template links, and click `Use Template` on the top right hand side.
-- Under `Secrets` in `Workspace Features`, add the environment variables below.
-  - Tip: You can click `Edit as JSON` and copy the values below in.
-- Click `Deploy` in the top right.
-  - Tip: Deploy your backend first, as you'll need the deployment URL for the frontend's `NEXT_PUBLIC_API_URL` environment variable.
+- Uses SQLite with `agent.db` file
+- No additional configuration needed
+- Tables are automatically created on startup
 
-**Backend**
+### Production Mode
 
-```
-{
-  "CDP_API_KEY_NAME": "get this from https://portal.cdp.coinbase.com/projects/api-keys",
-  "CDP_API_KEY_PRIVATE_KEY": "get this from https://portal.cdp.coinbase.com/projects/api-keys",
-  "OPENAI_API_KEY": "get this from https://platform.openai.com/api-keys",
-  "NETWORK_ID": "base-sepolia"
-}
-```
+1. Set `ENVIRONMENT=production` in your environment
+2. Ensure PostgreSQL is running (via Docker or standalone)
+3. Configure PostgreSQL environment variables
+4. Run migrations: `poetry run alembic upgrade head`
 
-**Important: Replit resets the SQLite template on every deployment, before sending funds to your agent or using it on Mainnet be sure to read [Agent Wallet](#agent-wallet) and save your wallet ID and seed in a safe place.**
+## Development Plan Progress
 
-**Frontend**
+### Phase 1: Production Infrastructure ✅
 
-```
-{
-  "NEXT_PUBLIC_API_URL": "your backend deployment URL here"
-}
-```
+- [x] Database Migration Setup
+  - [x] Created SQLAlchemy models
+  - [x] Set up Alembic for migrations
+  - [x] Created initial migration
+- [x] Database Abstraction
+  - [x] Implemented SQLite for development
+  - [x] Added PostgreSQL support for production
+  - [x] Created database configuration module
+- [x] Docker Setup
+  - [x] Created docker-compose.yml for PostgreSQL
+  - [x] Added production database configuration
+  - [x] Created Dockerfile for application
+  - [x] Set up production Docker Compose with:
+    - [x] Resource limits
+    - [x] Health monitoring
+    - [x] Log rotation
+    - [x] Volume management
 
-## License
+### Phase 2: Security & Monitoring ✅
 
-See [LICENSE.md](LICENSE.md) for details.
+- [x] API Security
+  - [x] Added rate limiting (200/day, 50/hour global; 100/day, 30/hour for chat)
+  - [x] Implemented request validation with marshmallow schemas
+  - [x] Set up CORS properly
+- [x] Monitoring
+  - [x] Added logging configuration
+  - [x] Implemented health checks with database connectivity testing
+  - [x] Added request logging and error tracking
+- [x] Error Handling
+  - [x] Added global error handlers for validation, rate limits, and server errors
+  - [x] Improved error responses with consistent JSON format
+  - [x] Added request validation for all endpoints
 
-## Contributing
+Future Security Improvements:
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
+- [ ] Authentication & Authorization
+  - [ ] Add JWT authentication
+  - [ ] Implement role-based access control
+  - [ ] Add API key management
+- [ ] Enhanced Security
+  - [ ] Add request signing for sensitive operations
+  - [ ] Implement IP whitelisting
+  - [ ] Add request encryption for sensitive data
+- [ ] Advanced Monitoring
+  - [ ] Set up APM (Application Performance Monitoring)
+  - [ ] Add distributed tracing
+  - [ ] Implement advanced metrics collection
+
+### Phase 3: Deployment & Scaling (In Progress)
+
+- [x] CI/CD Pipeline
+  - [x] Set up GitHub Actions workflow
+  - [x] Added automated testing with PostgreSQL
+  - [x] Configured Docker build and push
+- [ ] Infrastructure
+  - [ ] Choose cloud provider
+  - [ ] Set up load balancing
+  - [ ] Configure auto-scaling
+- [ ] Documentation
+  - [ ] API documentation
+  - [ ] Deployment guide
+  - [ ] Monitoring guide
+
+### CI/CD Pipeline
+
+The project uses GitHub Actions for continuous integration and deployment:
+
+1. On every push and pull request to main:
+
+   - Runs automated tests with PostgreSQL
+   - Validates code formatting
+   - Checks dependencies
+
+2. On merge to main:
+   - Builds Docker image
+   - Pushes to Docker Hub
+   - Tags with latest version
+
+Required Secrets:
+
+- `DOCKERHUB_USERNAME`: Your Docker Hub username
+- `DOCKERHUB_TOKEN`: Docker Hub access token
+
+### Deployment
+
+The application can be deployed to any cloud provider that supports Docker containers. Recommended setup:
+
+1. Infrastructure Requirements:
+
+   - 2+ CPU cores
+   - 2GB+ RAM
+   - 20GB+ SSD storage
+   - Managed PostgreSQL database
+
+2. Environment Variables:
+
+   ```env
+   # Required for production
+   ENVIRONMENT=production
+   POSTGRES_USER=<db-user>
+   POSTGRES_PASSWORD=<db-password>
+   POSTGRES_DB=onchain_agent
+   POSTGRES_HOST=<db-host>
+   CDP_API_KEY_NAME=<your-key-name>
+   CDP_API_KEY_PRIVATE_KEY=<your-private-key>
+   OPENAI_API_KEY=<your-openai-key>
+   ```
+
+3. Deployment Steps:
+
+   ```bash
+   # Pull latest image
+   docker pull <username>/onchain-agent-backend:latest
+
+   # Run with production config
+   docker run -d \
+     --name onchain-agent \
+     -p 5001:5001 \
+     --env-file .env \
+     -v /path/to/cdp_api_key.json:/app/cdp_api_key.json \
+     <username>/onchain-agent-backend:latest
+   ```
+
+4. Health Monitoring:
+
+   ```bash
+   # Check application health
+   curl http://your-domain:5001/health
+
+   # View logs
+   docker logs -f onchain-agent
+   ```
 
 ## Troubleshooting
 
 ### CDP SDK Authentication Issues
 
-If you encounter authentication errors with the CDP SDK like the following:
+There are two ways to configure the CDP SDK:
 
+1. Using JSON file:
+
+   - Download API key JSON from CDP Portal
+   - Place in project root as `cdp_api_key.json`
+   - SDK will automatically load configuration
+
+2. Using Environment Variables:
+   - Set `CDP_API_KEY_NAME` and `CDP_API_KEY_PRIVATE_KEY` in `.env`
+   - Ensure keys are properly formatted
+   - SDK will use these variables for authentication
+
+### Important Notes About Wallets
+
+- In development mode, wallet data is stored in SQLite
+- In production mode, wallet data is stored in PostgreSQL
+- Wallet seeds should be securely stored and backed up
+- ETH transfers are disabled for security reasons
+
+## Testing
+
+Run database tests:
+
+```bash
+PYTHONPATH=. poetry run python test_db.py
 ```
-Could not deserialize key data. The data may be in an incorrect format, the provided password may be incorrect, it may be encrypted with an unsupported algorithm, or it may be an unsupported key type (e.g. EC curves with explicit parameters).
+
+## Wallet Management
+
+### Development Mode
+
+- A new wallet is automatically created and managed by the CDP SDK
+- Wallet credentials are saved in `wallet_credentials.json`
+- Wallet seed is encrypted and saved in `dev_wallet_seed.json`
+- Each development session maintains its own wallet for testing
+- Wallet data is persisted between server restarts
+
+### Production Mode
+
+Set the following environment variables:
+
+```bash
+export CDP_WALLET_ID="your-production-wallet-id"
 ```
 
-This is typically caused by issues with how the private key is formatted or passed to the SDK. Here are two ways to resolve this:
+## Configuration
 
-#### Method 1: Using JSON File (Recommended)
+### Environment Variables
 
-1. Download the API key JSON file from the [CDP Portal](https://portal.cdp.coinbase.com/projects/api-keys)
-2. Save it as `cdp_api_key.json` in your project root
-3. Use the following code to configure the SDK:
+Development:
 
-```python
-with open("cdp_api_key.json") as f:
-    config = json.load(f)
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `FLASK_RUN_PORT`: Server port (default: 5001)
 
-values = {
-    "cdp_api_key_name": config['name'],
-    "cdp_api_key_private_key": config['privateKey']
+Production:
+
+- `CDP_WALLET_ID`: Production wallet ID
+- Additional environment variables as needed for production deployment
+
+### CDP API Configuration
+
+The CDP API requires credentials in `cdp_api_key.json`:
+
+```json
+{
+  "name": "organizations/your-org-id/apiKeys/your-key-id",
+  "privateKey": "your-private-key"
 }
-
-agentkit = CdpAgentkitWrapper(**values)
 ```
 
-#### Method 2: Using Environment Variables
+## Agent Capabilities
 
-If you prefer using environment variables, ensure they are formatted exactly as follows:
+The agent can perform the following blockchain operations:
+
+1. Deploy ERC-20 tokens
+
+   - Required parameters: name, symbol
+   - Example: "Deploy a new token called MyToken with symbol MTK"
+   - Automatically saves deployed token address to database
+   - Network: Base Sepolia testnet
+
+2. Deploy NFTs
+
+   - Required parameters: name, symbol
+   - Example: "Create an NFT collection called MyNFT with symbol MNFT"
+   - Automatically saves deployed NFT address to database
+   - Network: Base Sepolia testnet
+
+3. Request testnet funds
+
+   - No parameters required
+   - Automatically uses the configured wallet
+   - Example: "Request testnet funds"
+   - Provides Base Sepolia testnet ETH
+   - Useful for covering gas fees
+
+4. Check wallet balances
+   - Required parameter: wallet address
+   - Example: "Check the balance of 0x..."
+   - Shows ETH balance on Base Sepolia
+   - Can check any wallet address
+
+Note: ETH transfers are disabled for security reasons.
+
+### Conversation Examples
+
+The agent understands natural language requests. Here are some example conversations:
+
+1. Deploying a token:
+
+   ```
+   User: "Can you create a new token called PapaToken with symbol PAPA?"
+   Agent: "I'll help you deploy an ERC-20 token called PapaToken (PAPA) on Base Sepolia..."
+   ```
+
+2. Requesting funds:
+
+   ```
+   User: "I need some testnet ETH"
+   Agent: "I'll request testnet funds for your wallet..."
+   ```
+
+3. Checking balance:
+   ```
+   User: "What's the balance of my wallet?"
+   Agent: "I'll check the balance of your wallet address..."
+   ```
+
+### Error Handling
+
+The agent handles common errors and provides helpful feedback:
+
+- Insufficient gas fees
+- Failed transactions
+- Network issues
+- Invalid parameters
+
+## Docker Deployment
+
+### Prerequisites
+
+- Docker Desktop installed and running
+- `.env` file configured with all required variables
+- CDP API credentials in `cdp_api_key.json`
+- Wallet credentials in `wallet_credentials.json` (if reusing an existing wallet)
+
+### Development
+
+Run PostgreSQL only (for local development):
 
 ```bash
-CDP_API_KEY_NAME="organizations/your-org-id/apiKeys/your-key-id"
-CDP_API_KEY_PRIVATE_KEY="-----BEGIN EC PRIVATE KEY-----\nyour-key-data\n-----END EC PRIVATE KEY-----\n"
+docker compose up postgres -d
 ```
 
-Note: Some OS/terminals don't handle newline literals (`\n`) well in environment variables. In such cases, use Method 1 instead.
+### Production
 
-## Running the Server
-
-To run the server:
+Run the complete stack:
 
 ```bash
-PYTHONPATH=. FLASK_RUN_PORT=5001 poetry run python src/agent_backend/index.py
+# Build and start all services
+docker compose up --build -d
+
+# Run database migrations
+docker compose exec app poetry run alembic upgrade head
+
+# View logs
+docker compose logs -f
+
+# Stop all services
+docker compose down
 ```
 
-Note: On macOS, port 5000 is often used by AirPlay Receiver. If you encounter a port conflict, you can:
+### Container Management
 
-1. Use a different port by setting `FLASK_RUN_PORT` (as shown above)
-2. Disable AirPlay Receiver in System Preferences -> General -> AirDrop & Handoff
+- Check container status: `docker compose ps`
+- View logs for specific service: `docker compose logs app -f`
+- Restart a service: `docker compose restart app`
+- Remove volumes and containers: `docker compose down -v`
+
+### Health Checks
+
+- PostgreSQL: `docker compose exec postgres pg_isready -U postgres`
+- Application: `curl http://localhost:5001/health`
+
+### Troubleshooting Docker
+
+1. If containers fail to start:
+   - Check logs: `docker compose logs`
+   - Verify environment variables
+   - Ensure ports are not in use
+2. Database connection issues:
+
+   - Confirm PostgreSQL is healthy
+   - Check database credentials
+   - Verify network connectivity
+
+3. Volume mounting issues:
+   - Ensure credential files exist
+   - Check file permissions
+   - Verify volume paths

@@ -1,31 +1,23 @@
 """NFT database operations."""
 
-import sqlite3
-import logging
 from typing import List
+from sqlalchemy import text
+
+from agent_backend.db.setup import get_engine
 
 def add_nft(address: str) -> None:
     """Add an NFT address to the database."""
-    try:
-        conn = sqlite3.connect('agent.db')
-        cursor = conn.cursor()
-        cursor.execute('INSERT OR REPLACE INTO nfts (address) VALUES (?)', (address,))
+    engine = get_engine()
+    with engine.connect() as conn:
+        conn.execute(
+            text("INSERT OR REPLACE INTO nfts (address) VALUES (:address)"),
+            {"address": address}
+        )
         conn.commit()
-    except Exception as e:
-        logging.error(f"Error adding NFT: {str(e)}")
-        raise
-    finally:
-        conn.close()
 
 def get_nfts() -> List[str]:
     """Get all NFT addresses from the database."""
-    try:
-        conn = sqlite3.connect('agent.db')
-        cursor = conn.cursor()
-        cursor.execute('SELECT address FROM nfts')
-        return [row[0] for row in cursor.fetchall()]
-    except Exception as e:
-        logging.error(f"Error getting NFTs: {str(e)}")
-        raise
-    finally:
-        conn.close()
+    engine = get_engine()
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT address FROM nfts"))
+        return [row[0] for row in result]

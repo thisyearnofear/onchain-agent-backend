@@ -1,60 +1,60 @@
+"""Database operations for wallet management."""
+
 import sqlite3
-from typing import Optional
+from typing import Optional, Dict, Any
 import logging
 import json
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def add_wallet_info(info: str) -> None:
+def save_wallet_info(wallet_id: str, wallet_data: Dict[str, Any]) -> None:
     """
-    Add or update wallet information in the database.
+    Save or update wallet information in the database.
+    Args:
+        wallet_id: The ID of the wallet
+        wallet_data: Dictionary containing wallet data including seed if available
     """
     try:
-        with sqlite3.connect("agent.db") as con:
-            cur = con.cursor()
+        with sqlite3.connect("agent.db") as conn:
+            cursor = conn.cursor()
             
-            # Check if wallet info exists
-            cur.execute("SELECT id FROM wallet")
-            existing = cur.fetchone()
+            # Convert wallet data to JSON string
+            data_json = json.dumps(wallet_data)
             
-            if existing:
-                # Update existing wallet info
-                cur.execute("UPDATE wallet SET info = ? WHERE id = ?", (info, existing[0]))
-            else:
-                # Insert new wallet info
-                cur.execute("INSERT INTO wallet(info) VALUES (?)", (info,))
+            # Insert or replace wallet info
+            cursor.execute(
+                "INSERT OR REPLACE INTO wallets (id, data) VALUES (?, ?)",
+                (wallet_id, data_json)
+            )
             
-            con.commit()
-            
-            if cur.rowcount > 0:
-                logger.info("Successfully saved wallet info")
-            else:
-                logger.warning("No changes made to wallet info")
+            conn.commit()
+            logger.info(f"Successfully saved wallet info for ID: {wallet_id}")
                 
-    except sqlite3.Error as e:
-        logger.error(f"Database error occurred: {str(e)}")
     except Exception as e:
-        logger.error(f"Unexpected error occurred: {str(e)}")
+        logger.error(f"Error saving wallet info: {str(e)}")
+        raise
 
-def get_wallet_info() -> Optional[str]:
+def get_wallet_info() -> Optional[Dict[str, Any]]:
     """
     Retrieve wallet information from the database.
+    Returns:
+        Dictionary containing wallet data if found, None otherwise
     """
     try:
-        with sqlite3.connect("agent.db") as con:
-            cur = con.cursor()
-            cur.execute("SELECT info FROM wallet")
-            result = cur.fetchone()
+        with sqlite3.connect("agent.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, data FROM wallets LIMIT 1")
+            result = cursor.fetchone()
             
             if result:
-                return json.loads(result[0])
-            else:
-                return None
+                wallet_id, data_json = result
+                wallet_data = json.loads(data_json)
+                wallet_data['id'] = wallet_id
+                return wallet_data
+            
+            return None
                 
-    except sqlite3.Error as e:
-        logger.error(f"Failed to retrieve wallet info: {str(e)}")
-        return None
     except Exception as e:
-        logger.error(f"Unexpected error while retrieving wallet info: {str(e)}")
+        logger.error(f"Error retrieving wallet info: {str(e)}")
         return None
