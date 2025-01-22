@@ -11,13 +11,19 @@ import threading
 from datetime import datetime
 from sqlalchemy import text
 import concurrent.futures
+import logging
 
 from agent_backend.agent.initialize_agent import initialize_agent
 from agent_backend.agent.run_agent import run_agent
-from agent_backend.db.setup import setup, get_engine
+from agent_backend.db.setup import setup_database, get_engine
 from agent_backend.db.tokens import get_tokens
 from agent_backend.db.nfts import get_nfts
 from agent_backend.schemas import chat_request_schema
+from agent_backend.config import get_settings
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 app = Flask(__name__)
@@ -31,10 +37,17 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
-# Setup SQLite tables
-app.logger.info("Setting up database...")
-setup()
-app.logger.info("Database setup complete")
+@app.before_first_request
+def setup():
+    """Set up the application before the first request."""
+    logger.info("Setting up database...")
+    setup_database()
+    logger.info("Database setup complete")
+    
+    logger.info("Starting agent initialization...")
+    global agent_executor
+    agent_executor = initialize_agent()
+    logger.info("Agent initialization complete")
 
 # Initialize the agent in a background thread with timeout
 agent_executor = None

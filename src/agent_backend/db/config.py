@@ -1,40 +1,31 @@
-"""Database configuration module."""
+"""Database configuration."""
 
 import os
-from pathlib import Path
-from typing import Optional
-
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+from typing import Dict, Any
 
 def get_database_url() -> str:
-    """Get the database URL based on the environment."""
-    # Check if we're in production (Render sets this automatically)
-    if os.getenv('RENDER'):
-        user = os.getenv("POSTGRES_USER")
-        password = os.getenv("POSTGRES_PASSWORD")
-        host = os.getenv("POSTGRES_HOST")
-        db = os.getenv("POSTGRES_DB")
+    """Get database URL from environment variables."""
+    # First try Render's internal database URL
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        return database_url
         
-        if not all([user, password, host, db]):
-            raise ValueError("Missing required database configuration. Please set POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, and POSTGRES_DB")
-            
-        # Construct the URL without trying to parse host/port
-        return f"postgresql://{user}:{password}@{host}/{db}"
+    # Fallback to constructing URL from individual components
+    host = os.getenv("POSTGRES_HOST", "localhost")
+    port = os.getenv("POSTGRES_PORT", "5432")
+    database = os.getenv("POSTGRES_DB", "onchain_agent")
+    user = os.getenv("POSTGRES_USER", "postgres")
+    password = os.getenv("POSTGRES_PASSWORD", "postgres")
     
-    # Development: Use SQLite with the original agent.db file
-    return "sqlite:///agent.db"
+    return f"postgresql://{user}:{password}@{host}:{port}/{database}"
 
-def get_engine_options() -> dict:
-    """Get SQLAlchemy engine options based on the environment."""
-    if os.getenv('RENDER'):
-        return {
-            "pool_size": 3,  # Reduced pool size for Render free tier
-            "max_overflow": 5,  # Reduced max overflow
-            "pool_timeout": 30,
-            "pool_recycle": 1800,
-            "pool_pre_ping": True,  # Enable connection health checks
-        }
-    return {} 
+def get_engine_options() -> Dict[str, Any]:
+    """Get SQLAlchemy engine options."""
+    return {
+        "pool_pre_ping": True,  # Enable connection health checks
+        "pool_size": 5,  # Set a reasonable pool size
+        "max_overflow": 10,  # Allow some overflow connections
+        "pool_timeout": 30,  # Connection timeout in seconds
+        "pool_recycle": 1800,  # Recycle connections every 30 minutes
+        "echo": False,  # Set to True for SQL query logging
+    } 
