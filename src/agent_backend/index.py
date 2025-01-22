@@ -9,6 +9,7 @@ import json
 import time
 from datetime import datetime
 from sqlalchemy import text
+import threading
 
 from agent_backend.agent.initialize_agent import initialize_agent
 from agent_backend.agent.run_agent import run_agent
@@ -30,11 +31,26 @@ limiter = Limiter(
 )
 
 # Setup SQLite tables
+app.logger.info("Setting up database...")
 setup()
+app.logger.info("Database setup complete")
 
-# Initialize the agent
-agent_executor = initialize_agent()
-app.agent_executor = agent_executor
+# Initialize the agent in a background thread
+agent_executor = None
+initialization_error = None
+
+def init_agent():
+    global agent_executor, initialization_error
+    try:
+        app.logger.info("Starting agent initialization...")
+        agent_executor = initialize_agent()
+        app.logger.info("Agent initialization complete")
+    except Exception as e:
+        app.logger.error(f"Failed to initialize agent: {str(e)}")
+        initialization_error = str(e)
+
+init_thread = threading.Thread(target=init_agent)
+init_thread.start()
 
 # Error handlers
 @app.errorhandler(ValidationError)
@@ -63,6 +79,11 @@ def handle_internal_error(error):
 @app.route("/api/chat", methods=['GET', 'POST'])
 @limiter.limit("100/day;30/hour;1/second")
 def chat():
+    if not agent_executor:
+        if initialization_error:
+            return jsonify({"error": f"Agent initialization failed: {initialization_error}"}), 500
+        return jsonify({"error": "Agent is still initializing"}), 503
+        
     if request.method == 'GET':
         def generate():
             while True:
@@ -146,24 +167,28 @@ def health_check():
     try:
         # Check database connection
         engine = get_engine()
-        app.logger.info("Attempting database connection check...")
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-            app.logger.info("Database connection successful")
+        
+        # Check agent initialization status
+        agent_status = "initializing"
+        if agent_executor:
+            agent_status = "ready"
+        elif initialization_error:
+            agent_status = f"failed: {initialization_error}"
         
         return jsonify({
             "status": "healthy",
             "database": "connected",
-            "timestamp": datetime.utcnow().isoformat(),
-            "environment": "production" if os.getenv('RENDER') else "development"
+            "agent": agent_status,
+            "timestamp": datetime.utcnow().isoformat()
         }), 200
     except Exception as e:
         app.logger.error(f"Health check failed: {str(e)}")
         return jsonify({
             "status": "unhealthy",
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat(),
-            "environment": "production" if os.getenv('RENDER') else "development"
+            "timestamp": datetime.utcnow().isoformat()
         }), 500
 
 if __name__ == "__main__":
