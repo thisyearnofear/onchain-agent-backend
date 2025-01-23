@@ -30,7 +30,7 @@ COPY . .
 ENV PYTHONPATH=/app/src
 
 # Expose port
-EXPOSE 5001
+EXPOSE 8080
 
 # Run the application
-CMD gunicorn --workers=2 --timeout=120 --bind=0.0.0.0:$PORT --log-level=info --worker-class=sync --worker-tmp-dir=/dev/shm src.agent_backend.index:app 
+CMD gunicorn --workers=2 --timeout=120 --bind=0.0.0.0:8080 --log-level=info --worker-class=sync --worker-tmp-dir=/dev/shm src.agent_backend.index:app 
